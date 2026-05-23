@@ -197,18 +197,37 @@ st.divider()
 # Paso 1
 st.markdown('<span class="step-badge">Paso 1</span>', unsafe_allow_html=True)
 st.subheader("📸 Captura de productos")
-st.caption("Sube una o varias imágenes de los productos adquiridos.")
 
-uploaded_files = st.file_uploader(
-    "Arrastra o selecciona las imágenes",
-    type=["jpg", "jpeg", "png", "webp"],
-    accept_multiple_files=True,
+modo = st.radio(
+    "Fuente:",
+    ["📷 Cámara en vivo", "🖼️ Subir imagen"],
+    horizontal=True,
     label_visibility="collapsed",
 )
 
-if not uploaded_files:
-    st.markdown("""<div class="info-box">👆 Sube las fotos para iniciar la validación.</div>""", unsafe_allow_html=True)
-    st.stop()
+imagenes = []
+
+if modo == "📷 Cámara en vivo":
+    st.caption("Apunta la cámara al producto y presiona **Tomar foto**.")
+    foto = st.camera_input("Capturar producto", label_visibility="collapsed")
+    if foto:
+        imagenes.append(Image.open(foto).convert("RGB"))
+    else:
+        st.markdown("""<div class="info-box">📷 Permite el acceso a la cámara y captura el producto.</div>""", unsafe_allow_html=True)
+        st.stop()
+else:
+    st.caption("Sube una o varias imágenes (una por producto).")
+    archivos = st.file_uploader(
+        "Selecciona imágenes",
+        type=["jpg", "jpeg", "png", "webp"],
+        accept_multiple_files=True,
+        label_visibility="collapsed",
+    )
+    if not archivos:
+        st.markdown("""<div class="info-box">👆 Sube las fotos para iniciar la validación.</div>""", unsafe_allow_html=True)
+        st.stop()
+    for f in archivos:
+        imagenes.append(Image.open(f).convert("RGB"))
 
 # Paso 2
 st.divider()
@@ -216,10 +235,9 @@ st.markdown('<span class="step-badge">Paso 2</span>', unsafe_allow_html=True)
 st.subheader("🔍 Clasificación de productos")
 
 all_detections = []
-progress = st.progress(0, text="Analizando imágenes…")
+progress = st.progress(0, text="Analizando imagen…")
 
-for i, file in enumerate(uploaded_files):
-    img  = Image.open(file).convert("RGB")
+for i, img in enumerate(imagenes):
     dets = classify_yolo(model, img)
 
     col1, col2 = st.columns([1, 2])
@@ -239,7 +257,7 @@ for i, file in enumerate(uploaded_files):
         else:
             st.warning("No se detectó ningún producto en esta imagen.")
 
-    progress.progress((i + 1) / len(uploaded_files), text=f"Procesando {i+1}/{len(uploaded_files)}…")
+    progress.progress((i + 1) / len(imagenes), text=f"Procesando {i+1}/{len(imagenes)}…")
     time.sleep(0.1)
 
 progress.empty()
