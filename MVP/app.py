@@ -112,6 +112,12 @@ def preprocess_opencv(pil_img):
 # ══════════════════════════════════════════════════════════════
 
 def classify_yolo(model, pil_img):
+    # Forzar nombres desde CLASS_NAMES (model.names puede estar vacío al cargar state_dict)
+    try:
+        model.model.names = {i: name for i, name in enumerate(CLASS_NAMES)}
+    except Exception:
+        pass
+
     processed = preprocess_opencv(pil_img)
     results   = model.predict(source=processed, verbose=False, conf=CONFIDENCE_THRESHOLD)
     detections = []
@@ -121,13 +127,13 @@ def classify_yolo(model, pil_img):
                 for box in r.boxes:
                     conf  = float(box.conf[0])
                     cls   = int(box.cls[0])
-                    label = model.names[cls]
+                    label = CLASS_NAMES[cls] if cls < len(CLASS_NAMES) else str(cls)
                     detections.append((label, conf))
         else:
             if r.probs is not None:
                 top1_idx  = int(r.probs.top1)
                 top1_conf = float(r.probs.top1conf)
-                label     = model.names[top1_idx]
+                label     = CLASS_NAMES[top1_idx] if top1_idx < len(CLASS_NAMES) else str(top1_idx)
                 detections.append((label, top1_conf))
     return detections
 
